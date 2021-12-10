@@ -4,7 +4,8 @@ A single layer preceptron has a Multiply and accumulate functionality, which acc
 ![dut_design_top](./document/pic/sl_preceptron_dut.png).  
 The Design architecture is briefly described in the diagram, the names doesn't correlate with the file names or module names, but aims to represents the functional abstractions made. The RAM store the weight data, and the data vector is streamed into the design, A 4:1 geared Fifo is used to let the MAC consume the weight and data element at the same rate, and the result are accumulated. The AI status sum and comparator values are updates at the end of processing, when all the vector elements in the vector are consumed. The threshold value is sampled and hold during the start of the processing, or when first vector element is received.  
 
-
+![dut_design_top](./document/pic/tb_architecture.png).   
+The Testbench architecture relies on the stimuli file, and supports back to back vectors, where each vector and weight could be streamed in the dut. The result is compared with the expected result from the file.
 ## Python script
 An algorithm of the design is implemented in python3. And will generate the stimuli files for the testbench.
 - `python3 sl_preceptron.py` will generate the stimuli files in the same folder. The test bench expects the file generated from this script. This will create the weight file, data file and expected result with threshold data. The length of the vector, the data width etc can be changed in the script.
