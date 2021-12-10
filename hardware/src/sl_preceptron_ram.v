@@ -1,3 +1,8 @@
+/*
+* Author: Arun Jeevaraj
+* Date: Dec 8 2021
+* Description: Functionally equivalent RAM block.  
+*/
 `timescale 1ns / 1ps
 module sl_preceptron_ram 
 #(parameter DATA_WIDTH = 8, ADDR_WIDTH = 6)

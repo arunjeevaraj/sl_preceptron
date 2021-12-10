@@ -1,10 +1,16 @@
+/*
+* Author: Arun Jeevaraj
+* Date: Dec 8 2021
+* Description: Multiply and accumulate, initates when start_processing pulse asserts high, until done vector_processing is set.
+*              this modules expects continuous data and weight stream, and supports no back pressure.  
+*/
 module sl_preceptron_mac 
 #(parameter DATA_IN_LANES  = 4,
             DATA_IN_WIDTH  = 8,
             MEM_ADDR_WIDTH = 16,
             WEIGHTS_WIDTH  = 8,
             VECTOR_LENGTH  = 64,
-            SUM_WIDTH = 24)
+            SUM_WIDTH = 22)
 (
   input clk,
   input rst_n,

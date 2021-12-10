@@ -1,3 +1,8 @@
+/*
+* Author: Arun Jeevaraj
+* Date: Dec 8 2021
+* Description: The Top module that stiches the fifo, mac and the sram blocks. The bus access to the Ram is muxed between the external mem interface and the mac.   
+*/
 `timescale 1ns / 1ps
 
 module sl_preceptron_top 
@@ -6,7 +11,7 @@ module sl_preceptron_top
             MEM_ADDR_WIDTH = 16,
             WEIGHTS_WIDTH  = 8,
             VECTOR_LENGTH  = 64,
-            SUM_WIDTH = 24)
+            SUM_WIDTH = 22)
 (
   input clk,
   input rst_n,

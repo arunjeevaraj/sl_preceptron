@@ -1,6 +1,6 @@
 /*
 * Author: Arun Jeevaraj
-* Date: Dec 8 2021
+* Date: Dec 7 2021
 * Description: Test bench, Reads the stimuli file, drives the signals into single layer preceptron dut, 
 * and provides a simple scoreboard that reports pass under the condition all expected results match!  
 */
@@ -13,12 +13,13 @@ localparam DATA_IN_LANES  = 4;
 localparam DATA_IN_WIDTH  = 8;
 localparam MEM_ADDR_WIDTH = 16;
 localparam WEIGHTS_WIDTH  = 8;
-localparam VECTOR_LENGTH  = 64;
+localparam VECTOR_LENGTH  = 128;
 localparam CLOCK_PERIOD   = 5;
 localparam RESET_DURATION = 12;
 localparam TEST_DURAT_CCS = 2500;
-localparam SUM_WIDTH = 24;
+localparam SUM_WIDTH = DATA_IN_WIDTH + WEIGHTS_WIDTH + $clog2(VECTOR_LENGTH); //weight_width+data_in_width+log(64)/log2
 localparam TOTAL_DATA_IN_WIDTH = DATA_IN_LANES*DATA_IN_WIDTH;
+localparam N_VECTORS_IN_FILE = 5;
 
 reg clk = 1'b0;
 reg rst_n = 1'b1;
@@ -84,9 +85,16 @@ end
 
 // testbench termination
 initial begin
-	weight_fid = $fopen("../../algorithm/weight_Vect_s64_w8_M5_Weig_w8.dat", "r");
-	data_in_fid = $fopen("../../algorithm/data_in_Vect_s64_w8_M5_Weig_w8.dat", "r");
-	result_fid = $fopen("../../algorithm/thre_sum_comp_s64_w8_M5_Weig_w8.dat", "r");
+	// for 64 long vectors 8 bit wide data and weight data.
+	if (VECTOR_LENGTH == 64) begin
+		weight_fid = $fopen("../../algorithm/weight_Vect_s64_w8_M5_Weig_w8.dat", "r");
+		data_in_fid = $fopen("../../algorithm/data_in_Vect_s64_w8_M5_Weig_w8.dat", "r");
+		result_fid = $fopen("../../algorithm/thre_sum_comp_s64_w8_M5_Weig_w8.dat", "r");
+	end else if (VECTOR_LENGTH == 128) begin
+		weight_fid = $fopen("../../algorithm/weight_Vect_s128_w8_M5_Weig_w8.dat", "r");
+		data_in_fid = $fopen("../../algorithm/data_in_Vect_s128_w8_M5_Weig_w8.dat", "r");
+		result_fid = $fopen("../../algorithm/thre_sum_comp_s128_w8_M5_Weig_w8.dat", "r");
+	end
 	if (weight_fid == 0 || data_in_fid == 0) begin
 		if (!weight_fid)  $display("File: ../../algorithm/weight_Vect_s64_w8_M5_Weig_w8.dat not found !");
 		if (!data_in_fid)  $display("File: ../../algorithm/data_in_Vect_s64_w8_M5_Weig_w8.dat not found !");
@@ -113,7 +121,7 @@ initial begin
   `endif
 	@(posedge reset_done);
 	$display("At time %0d Test writing to weight memory !", $time);
-	repeat(5) begin
+	repeat(N_VECTORS_IN_FILE) begin
 		do_write_weights_to_ram(count);
 		fork
 			do_drive_data(count);
@@ -121,8 +129,10 @@ initial begin
 		join
 		count = count + 1;
 	end
+	if (match_count == N_VECTORS_IN_FILE) begin
+		$display("The test passed with all matches !");
+	end
 	$finish;
-	//do_write_weights_to_ram(1);
 end
 
 

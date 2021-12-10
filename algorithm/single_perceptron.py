@@ -1,9 +1,10 @@
 import numpy as np
 
-N = 64;  #vector size
+N = 128;  #vector size
 M = 5;
 data_width = 8;
 weight_width = 8;
+debug = 0;
 
 print("Running single perceptron script!")
 
@@ -14,17 +15,28 @@ print("Creating " + str(M) + " vectors with length " + str(N))
 #normalise and spread it across the datawidth specified.
 data_in_vector_norm = data_in_vector/np.max(data_in_vector);
 data_in_vector_fi  = np.ceil(data_in_vector_norm*(2**data_width)) - 1;
+data_in_vector_fi = data_in_vector_fi.astype(int)
 
 weights_n_norm = weights_n/np.max(weights_n);
 weights_n_fi = np.ceil(weights_n_norm*(2**weight_width)) - 1;
-
+weights_n_fi = weights_n_fi.astype(int)
 #compute the result.
 accumulated_result = np.zeros(M);
 threshold_vector = np.random.rand(M);
+
+
 for v_i in range(M):
     weight = np.reshape(weights_n_fi[:,v_i], (N,1))
     vector = np.reshape(data_in_vector_fi[:,v_i], (N,1))
     accumulated_result[v_i] = np.dot(weight.T, vector)
+    # for debug
+    if v_i == 0 and debug:
+        accumulated_list = []
+        for e_i in range(N):
+            if e_i == 0:
+                accumulated_list.append(weight[e_i]*vector[e_i])
+            else: 
+                accumulated_list.append(weight[e_i]*vector[e_i]+ accumulated_list[-1])
      
 #accumulated_result = np.dot(data_in_vector, weights_n)
 print("accumulated result : " + str(accumulated_result))

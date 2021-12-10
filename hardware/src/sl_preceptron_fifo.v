@@ -1,3 +1,9 @@
+/*
+* Author: Arun Jeevaraj
+* Date: Dec 8 2021
+* Description: 4:1 gear fifo, which consumes 4 inputs and produces 1 output per cc. The module also generates the start processing and done processing signals,
+*               Has no overflow protection!, and supports no back pressure.   
+*/
 module sl_preceptron_fifo 
 #(parameter DATA_WIDTH = 8, DATA_LANES = 4, FIFO_SIZE = 52)
 (
