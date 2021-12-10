@@ -1,6 +1,9 @@
 # sl_preceptron
+A single layer preceptron has a Multiply and accumulate functionality, which accumulates the results of the dot product of two vectors( data and weight vector of same length) and compares the result to a configured threshold value.  
+
 ![dut_design_top](./document/pic/sl_preceptron_dut.png).  
- A single layer preceptron has a Multiply and accumulate functionality, which accumulates the results of the dot product of two vectors( data and weight vector of same length) and compares the result to a configured threshold value.
+The Design architecture is briefly described in the diagram, the names doesn't correlate with the file names or module names, but aims to represents the functional abstractions made. The RAM store the weight data, and the data vector is streamed into the design, A 4:1 geared Fifo is used to let the MAC consume the weight and data element at the same rate, and the result are accumulated. The AI status sum and comparator values are updates at the end of processing, when all the vector elements in the vector are consumed. The threshold value is sampled and hold during the start of the processing, or when first vector element is received.  
+
 
 ## Python script
 An algorithm of the design is implemented in python3. And will generate the stimuli files for the testbench.
