@@ -1,5 +1,5 @@
 module sl_preceptron_fifo 
-#(parameter DATA_WIDTH = 8, DATA_LANES = 4, FIFO_SIZE = 48)
+#(parameter DATA_WIDTH = 8, DATA_LANES = 4, FIFO_SIZE = 52)
 (
     input clk,
     input rst_n,
@@ -7,8 +7,15 @@ module sl_preceptron_fifo
     input [DATA_WIDTH*DATA_LANES-1:0] data_in,
     output reg data_out_valid,
     output reg [DATA_WIDTH-1:0] data_out,
-    output done_vector_processing
+    output done_vector_processing,
+    output start_vector_processing
 );
+
+
+reg[2:0] c_state, n_state, p_state;
+localparam ST_IDLE = 0,
+           ST_START = 1,
+           ST_DONE = 2;
 
 reg [DATA_WIDTH-1:0] fifo_mem [FIFO_SIZE:0];
 reg [9:0] write_addr, write_addr_n;
@@ -17,13 +24,14 @@ reg [10:0] rcv_pkt_cnt;
 reg [10:0] send_pkt_cnt;
 wire [10:0] rcv_pkt_cnt_n;
 wire [10:0] send_pkt_cnt_n;
-reg no_pkt_rcv;
-wire no_pkt_rcv_n;
 
-wire[DATA_WIDTH:0] data_val3,
-                   data_val2,
-                   data_val1,
-                   data_val0;
+reg data_in_valid_reg;
+reg[DATA_WIDTH-1:0] data_out_n;
+reg data_out_valid_n;
+wire[DATA_WIDTH-1:0] data_val3,
+                     data_val2,
+                     data_val1,
+                     data_val0;
 
 
 // assign
@@ -32,14 +40,15 @@ assign data_val1 = data_in_valid ? data_in[DATA_WIDTH*2-1:DATA_WIDTH] : fifo_mem
 assign data_val2 = data_in_valid ? data_in[DATA_WIDTH*3-1:2*DATA_WIDTH] : fifo_mem[write_addr+2];
 assign data_val3 = data_in_valid ? data_in[DATA_WIDTH*4-1:3*DATA_WIDTH] : fifo_mem[write_addr+3];
 assign rcv_pkt_cnt_n = data_in_valid ? rcv_pkt_cnt + 4 :
-                       done_vector_processing ? 0 :
+                       c_state == ST_IDLE ? 0 :
                        rcv_pkt_cnt;
 assign send_pkt_cnt_n = data_out_valid ? send_pkt_cnt + 1:
-                       done_vector_processing ? 0 :
+                       c_state == ST_IDLE ? 0 :
                        send_pkt_cnt;
 
-assign done_vector_processing = !no_pkt_rcv ? send_pkt_cnt == rcv_pkt_cnt : 0;
-assign no_pkt_rcv_n = data_in_valid ? 0 : no_pkt_rcv;
+
+assign start_vector_processing = data_in_valid == 1 && data_in_valid_reg == 0;
+assign done_vector_processing = c_state == ST_DONE;
 
 always @(posedge clk) begin
     if (!rst_n) begin
@@ -47,8 +56,10 @@ always @(posedge clk) begin
         read_addr <= 0;
         rcv_pkt_cnt <= 0;
         send_pkt_cnt <= 0;
-        no_pkt_rcv <= 1;              // set to zero once any packet is received.
         data_out <= 0;
+        data_out_valid <= 0;
+        data_in_valid_reg <= 0;
+        c_state <= ST_IDLE;
     end else begin
         read_addr <= read_addr_n;
         write_addr <= write_addr_n;
@@ -58,22 +69,46 @@ always @(posedge clk) begin
         fifo_mem[write_addr+3] <= data_val3;
         rcv_pkt_cnt <= rcv_pkt_cnt_n;
         send_pkt_cnt <= send_pkt_cnt_n;
-        no_pkt_rcv <= no_pkt_rcv_n;
+        data_out <= data_out_n;
+        data_out_valid <= data_out_valid_n;
+        data_in_valid_reg <= data_in_valid;
+        c_state <= n_state;
     end   
 end
-
-
+//state machine
 
 always @(*) begin
-    data_out_valid = 0;
+    n_state = c_state;
+    case(c_state) 
+        ST_IDLE: begin
+            if (start_vector_processing) begin
+                n_state = ST_START;
+            end
+        end
+        ST_START: begin
+            if (send_pkt_cnt == rcv_pkt_cnt-2) begin
+                n_state = ST_DONE;
+            end else
+                n_state = ST_START;
+        end       
+        default : begin
+            n_state = ST_IDLE;
+        end
+    endcase;
+end
+
+always @(*) begin
+    data_out_n = 0;
     write_addr_n = write_addr;
+    data_out_valid_n = 0;
     read_addr_n = read_addr;
     if (data_in_valid) begin
         write_addr_n = write_addr >= (FIFO_SIZE-DATA_LANES-1) ? 0 : write_addr_n + 4;
     end
-    if (data_in_valid || send_pkt_cnt < rcv_pkt_cnt) begin
+    if (c_state == ST_START && rcv_pkt_cnt != send_pkt_cnt) begin
         read_addr_n = read_addr >= (FIFO_SIZE-1) ? 0: read_addr_n + 1;
-        data_out_valid = 1;
+        data_out_valid_n = 1;
+        data_out_n = fifo_mem[read_addr];
     end
 end
 

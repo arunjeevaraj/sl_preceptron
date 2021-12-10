@@ -14,7 +14,7 @@ SIM_RTL                 := $(subst /cygdrive/c/,C:/, $(shell find $(ABS_TOP)/sim
 IVERILOG                := iverilog
 IVERILOG_OPTS           := -D IVERILOG=1 -g2012 -gassertions -Wall -Wno-timescale
 VVP                     := vvp
-XELAB_OPTS              := -debug typical $(TB_TOP) -s onfi_sim
+XELAB_OPTS              := -debug typical $(TB_TOP) -s sl_preceptron_sim
 
 sim/%.tb: sim/%.v $(RTL)
 	cd sim && $(VCS) $(VCS_OPTS) -o $*.tb $(RTL) $*.v -top $*

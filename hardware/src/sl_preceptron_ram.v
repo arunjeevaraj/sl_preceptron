@@ -1,7 +1,7 @@
 `timescale 1ns / 1ps
 module sl_preceptron_ram 
 #(parameter DATA_WIDTH = 8, ADDR_WIDTH = 6)
-(input clk,
+( input clk,
   input rst_n,  //not used.
   input mem_wen,
   input mem_ren,

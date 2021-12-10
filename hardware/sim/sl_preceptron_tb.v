@@ -16,7 +16,7 @@ localparam WEIGHTS_WIDTH  = 8;
 localparam VECTOR_LENGTH  = 64;
 localparam CLOCK_PERIOD   = 5;
 localparam RESET_DURATION = 12;
-localparam TEST_DURAT_CCS = 200;
+localparam TEST_DURAT_CCS = 2500;
 localparam SUM_WIDTH = 24;
 localparam TOTAL_DATA_IN_WIDTH = DATA_IN_LANES*DATA_IN_WIDTH;
 
@@ -42,6 +42,9 @@ reg loop = 1;
 reg reset_done = 0;
 integer weight_fid;
 integer data_in_fid;
+integer result_fid;
+integer count = 0;
+integer  match_count = 0;
 
 //instantiate DUT
 sl_preceptron_top  #( .DATA_IN_LANES(DATA_IN_LANES),
@@ -50,7 +53,7 @@ sl_preceptron_top  #( .DATA_IN_LANES(DATA_IN_LANES),
 					  .WEIGHTS_WIDTH(WEIGHTS_WIDTH),
 					  .VECTOR_LENGTH(VECTOR_LENGTH),
 					  .SUM_WIDTH(SUM_WIDTH))
-DUT_TOP ( .clk,
+DUT_TOP ( .clk(clk),
   .rst_n(rst_n),
   .data_valid(data_valid),
   .data_in(data_in),
@@ -83,9 +86,11 @@ end
 initial begin
 	weight_fid = $fopen("../../algorithm/weight_Vect_s64_w8_M5_Weig_w8.dat", "r");
 	data_in_fid = $fopen("../../algorithm/data_in_Vect_s64_w8_M5_Weig_w8.dat", "r");
+	result_fid = $fopen("../../algorithm/thre_sum_comp_s64_w8_M5_Weig_w8.dat", "r");
 	if (weight_fid == 0 || data_in_fid == 0) begin
 		if (!weight_fid)  $display("File: ../../algorithm/weight_Vect_s64_w8_M5_Weig_w8.dat not found !");
 		if (!data_in_fid)  $display("File: ../../algorithm/data_in_Vect_s64_w8_M5_Weig_w8.dat not found !");
+		if (!result_fid)  $display("File: ../../algorithm/thre_sum_comp_s64_w8_M5_Weig_w8.dat not found !");
 		$finish;
 	end
 	while (loop) begin
@@ -108,9 +113,15 @@ initial begin
   `endif
 	@(posedge reset_done);
 	$display("At time %0d Test writing to weight memory !", $time);
-	do_write_weights_to_ram(0);
-	do_drive_data(0);
-
+	repeat(5) begin
+		do_write_weights_to_ram(count);
+		fork
+			do_drive_data(count);
+			do_check_expected_result(count);
+		join
+		count = count + 1;
+	end
+	$finish;
 	//do_write_weights_to_ram(1);
 end
 
@@ -167,6 +178,32 @@ begin
 	$display("## driving data vector to DUT done");
 	data_valid = 0;
 	data_in = 0;
+end
+endtask
+
+task do_check_expected_result (input integer vector_i);
+	integer c1;
+	reg[SUM_WIDTH-1:0] expected_ai_status_sum;
+	reg[SUM_WIDTH-1:0] threshold_to_be_set;
+	reg expected_ai_status_comparator;
+begin
+	$display("## At time %0d Accessing result file and fectching configuration for vector %d", $time, vector_i);
+	if (!$feof(result_fid)) begin
+		c1 = $fscanf(result_fid, "%d,%d,%d\n", threshold_to_be_set, expected_ai_status_sum, expected_ai_status_comparator);
+		cfg_ai_threshold = threshold_to_be_set;
+		$display("At time %0d tb sets threshold: [0d%d] expects ai_sum as 0d%d & ai_comp : 0d%d", $time, threshold_to_be_set, expected_ai_status_sum, expected_ai_status_comparator);
+		wait(sl_preceptron_tb.DUT_TOP.mac_processor.c_state_del2 == 2);  //2 is state done. or if dut had status_valid, it could had been used instead.
+		$display("At time %0d tb stops waiting ", $time);
+		if (expected_ai_status_comparator == status_ai_comparator && expected_ai_status_sum == status_ai_sum) begin
+			$display("At time %0d tb result matchs with the expected value  ", $time);
+			match_count = match_count + 1;
+		end else begin
+			$display("Error At time %0d tb result doesnt matchs with the expected value  ", $time);
+			match_count = match_count - 1;
+		end
+			
+	end
+	$display("## driving data vector to DUT done");
 end
 endtask
 
