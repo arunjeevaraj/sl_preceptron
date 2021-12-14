@@ -11,7 +11,8 @@ module sl_preceptron_top
             MEM_ADDR_WIDTH = 16,
             WEIGHTS_WIDTH  = 8,
             VECTOR_LENGTH  = 64,
-            SUM_WIDTH = 22)
+            SUM_WIDTH = DATA_IN_WIDTH + WEIGHTS_WIDTH + $clog2(VECTOR_LENGTH),
+            SRAM_BASE_ADDRESS = 'h1000)
 (
   input clk,
   input rst_n,
@@ -32,7 +33,6 @@ reg dut_mem_lock; // if asserted, the sram memory bus is locked by the dut, and 
 wire start_vector_processing;
 wire done_vector_processing;
 wire dut_mem_lock_n;
-reg current_ai_comparator;
 wire[DATA_IN_WIDTH-1:0] data_out_fifo;
 wire data_out_fifo_valid;
 
@@ -65,13 +65,23 @@ wire[MEM_ADDR_WIDTH-1:0] to_mem_addr;
 wire[WEIGHTS_WIDTH-1:0] to_mem_wdata;
 wire[WEIGHTS_WIDTH-1:0] from_mem_rdata;
 
+
+wire valid_mem_addr;
+assign valid_mem_addr = mem_addr >= SRAM_BASE_ADDRESS ? 1 : 0;
+
+
 // mux mem interface to internal dut and external dut controls.
-assign to_mem_wen = dut_mem_lock ? dut_mem_wen : mem_wen;
+assign to_mem_wen = dut_mem_lock ? dut_mem_wen :
+                    valid_mem_addr ?  mem_wen :
+                    1'b0;
 assign to_mem_ren = dut_mem_lock ? dut_mem_ren : mem_ren;
-assign to_mem_addr = dut_mem_lock ? dut_mem_addr : mem_addr;
+assign to_mem_addr = dut_mem_lock ? dut_mem_addr : 
+                     valid_mem_addr ? (mem_addr - SRAM_BASE_ADDRESS) :
+                     'h0;
+
 assign to_mem_wdata = dut_mem_lock ? dut_mem_wdata : mem_wdata;
 assign dut_mem_rdata = dut_mem_lock ? from_mem_rdata : 0;
-assign mem_rdata = dut_mem_lock ? from_mem_rdata : 0;
+assign mem_rdata = !dut_mem_lock ? from_mem_rdata : 0;
 
 
 sl_preceptron_ram  #(.DATA_WIDTH(WEIGHTS_WIDTH), .ADDR_WIDTH(MEM_ADDR_WIDTH)) 
@@ -84,7 +94,7 @@ weight_ram1 ( .clk(clk),
               .mem_rdata(from_mem_rdata)
             );
 
-sl_preceptron_fifo #(.DATA_WIDTH(DATA_IN_WIDTH), .DATA_LANES(DATA_IN_LANES), .FIFO_SIZE((VECTOR_LENGTH/4+1)*3 + 1)) 
+sl_preceptron_fifo #(.DATA_WIDTH(DATA_IN_WIDTH), .DATA_LANES(DATA_IN_LANES), .FIFO_SIZE((VECTOR_LENGTH/4+1)*3 + 1 )) 
 data_incoming_fifo (.clk(clk),
                     .rst_n(rst_n),
                     .data_in_valid(data_valid),

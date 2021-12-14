@@ -100,7 +100,7 @@ always @(*) begin
         default : begin
             n_state = ST_IDLE;
         end
-    endcase;
+    endcase
 end
 
 always @(*) begin

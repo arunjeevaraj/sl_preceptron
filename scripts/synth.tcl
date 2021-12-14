@@ -15,6 +15,8 @@ synth_design -top ${TOP} -part ${FPGA_PART}
 write_checkpoint -force ${TOP}.dcp
 report_timing_summary -file post_synth_timing_summary.rpt
 report_drc -file post_synth_drc.rpt
-report_utilization -file post_synth_utilization.rpt
+report_utilization -hierarchical  -file post_synth_utilization.rpt
+#report_utilization -file post_synth_utilization.rpt
+#report_utilization -cells sl_preceptron_fifo -file fifo_utilization.rpt
 write_verilog -force -file post_synth.v
 write_xdc -force -file post_synth.xdc

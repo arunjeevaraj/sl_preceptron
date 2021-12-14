@@ -29,14 +29,19 @@ module sl_preceptron_mac
 );
 
 localparam ST_IDLE  = 0,
-           ST_START = 1,
-           ST_DONE  = 2;
+           ST_LOAD_RAM = 1,
+           ST_START = 2,
+           ST_DONE  = 3;
 
 reg[2:0] c_state, n_state, c_state_del1, c_state_del2;
 reg[MEM_ADDR_WIDTH-1:0] read_addr;
 
 
 //
+//reg data_valid_del_1;
+//reg [DATA_IN_WIDTH-1:0] data_in_del1;
+
+
 reg[2*DATA_IN_WIDTH-1:0] mul_result_reg;
 wire[2*DATA_IN_WIDTH-1:0] mul_result;
 reg[SUM_WIDTH-1:0] accumulated_result_reg;
@@ -62,6 +67,7 @@ always @(posedge clk) begin
     mul_result_reg <= 0;
     accumulated_result_reg <= 0;
     status_ai_comparator <= 0;
+    status_ai_sum <= 0;
   end else begin
     cfg_ai_threshold_store <= cfg_ai_threshold_store_n;
     c_state <= n_state;
@@ -77,9 +83,9 @@ end
 
 
 assign cfg_ai_threshold_store_n = start_vector_processing ? cfg_ai_threshold : cfg_ai_threshold_store; // store the threshold at the start of vector processing.
-assign mul_result = c_state_del1 == ST_START ? mem_rdata*data_in : mul_result_reg;
-assign accumulated_result = c_state_del2 == ST_START ? accumulated_result_reg + mul_result_reg 
-                          : c_state_del2 == ST_DONE ? 0
+assign mul_result = c_state == ST_START ? mem_rdata*data_in : mul_result_reg;
+assign accumulated_result = c_state_del1 == ST_START ? accumulated_result_reg + mul_result_reg 
+                          : c_state_del1 == ST_DONE ? 0
                           : accumulated_result_reg; 
 
 
@@ -91,11 +97,16 @@ always @(*) begin
   case (c_state)
     ST_IDLE: begin
       if (start_vector_processing) begin
-        n_state = ST_START;
+        n_state = ST_LOAD_RAM;
       end else begin
         n_state = ST_IDLE;
         read_addr = 0;
       end
+    end
+    ST_LOAD_RAM: begin
+      n_state = ST_START;
+      mem_ren = 1;
+      read_addr = mem_addr + 1;
     end
     ST_START: begin
       if (done_vector_processing) begin
